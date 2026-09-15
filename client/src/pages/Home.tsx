@@ -298,24 +298,21 @@ export default function Home() {
               <span className="welcome-index">SPATIAL KEY / MOBILE 01</span>
               <span className="launcher-pill">BETA</span>
             </div>
-            <h1>Space, in<br /><em>your hands.</em></h1>
-            <p>Scan a place with your phone or step into a saved tour.</p>
+            <h1>Step into<br /><em>any space.</em></h1>
+            <p>Curated digital twins. Curated experiences.</p>
             <div className="entry-actions">
               <button className="entry-card entry-card-primary" onClick={enterScanMode}>
                 <span className="entry-icon"><ScanLine size={21} /></span>
-                <span><strong>Scan a space</strong><small>Capture a room in 20 min</small></span>
+                <span><strong>Capture a space</strong><small>Seamless scanning, perfected.</small></span>
                 <ArrowUpRight size={18} />
               </button>
               <button className="entry-card entry-card-secondary" onClick={openTourBrowser}>
-                <span className="entry-icon"><Camera size={20} /></span>
-                <span><strong>Explore a tour</strong><small>Walk through Olive House</small></span>
+                <span className="entry-icon"><Compass size={20} /></span>
+                <span><strong>Step inside</strong><small>Interactive walkthrough</small></span>
                 <ArrowUpRight size={18} />
               </button>
             </div>
-            <div className="launcher-footer">
-              <span>NO APP · NO VR · JUST YOUR PHONE</span>
-              <button className="ghost-link" onClick={() => setInfoOpen(true)}>HOW IT WORKS <Info size={14} /></button>
-            </div>
+            <button className="ghost-link launcher-info-link" onClick={() => setInfoOpen(true)}>HOW IT WORKS <Info size={14} /></button>
           </section>
         )}
 
