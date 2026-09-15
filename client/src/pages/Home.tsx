@@ -23,6 +23,8 @@ import {
   X,
 } from "lucide-react";
 import PropertyScene, { type RoomId, type SplatStatus } from "@/components/PropertyScene";
+import { trpc } from "@/lib/trpc";
+import { useLocation, useRoute } from "wouter";
 
 type Mode = "chooser" | "browse" | "tour" | "scan";
 type ScanState = "ready" | "capturing" | "complete";
@@ -46,14 +48,24 @@ const scanStages = [
   { threshold: 100, label: "Space captured", hint: "Your 3D space is ready to explore" },
 ];
 
-const tours = [
+type Tour = {
+  id: string;
+  title: string;
+  subtitle: string;
+  eyebrow: string;
+  image: string;
+  description: string;
+  facts: string[];
+};
+
+const tours: Tour[] = [
   { id: "fallingwater", title: "Fallingwater", subtitle: "Frank Lloyd Wright · Mill Run, Pennsylvania", eyebrow: "ARCHITECTURE / 01", image: "/manus-storage/fallingwater-demo_db8fdb91.jpg", description: "Walk through Wright’s house built over Bear Run — a landmark of organic architecture, captured for the web.", facts: ["1935 design", "9,300 sq ft", "Bear Run reserve"] },
   { id: "olive-house", title: "Olive House", subtitle: "Westlake, Texas · Spatial Key original", eyebrow: "RESIDENTIAL / 04", image: "/manus-storage/linen-room_1595b9ca.jpg", description: "A warm, light-filled family home designed around the rhythm of the day.", facts: ["4 beds", "3.5 baths", "3,640 sq ft"] },
-] as const;
+];
 
 export default function Home() {
   const [mode, setMode] = useState<Mode>("chooser");
-  const [selectedTour, setSelectedTour] = useState<(typeof tours)[number]>(tours[0]);
+  const [selectedTour, setSelectedTour] = useState<Tour>(tours[0]);
   const [splatStatus, setSplatStatus] = useState<SplatStatus>("loading");
   const [splatProgress, setSplatProgress] = useState(0);
   const [splatLoadedBytes, setSplatLoadedBytes] = useState(0);
@@ -75,12 +87,40 @@ export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [liked, setLiked] = useState(false);
   const [notice, setNotice] = useState("");
+  const [, setLocation] = useLocation();
+  const [tourMatch, tourParams] = useRoute("/tour/:slug");
+  const dbTourQuery = trpc.tours.getBySlug.useQuery(
+    { slug: tourParams?.slug ?? "" },
+    { enabled: tourMatch && Boolean(tourParams?.slug) },
+  );
+  const createTourMutation = trpc.tours.create.useMutation();
 
   const activeRoom = rooms.find((item) => item.id === room) ?? rooms[0];
   const roomIndex = rooms.findIndex((item) => item.id === room);
   const activeScanStage = [...scanStages].reverse().find((stage) => scanProgress >= stage.threshold) ?? scanStages[0];
   const isMobile = typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
   const formatMb = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+
+  useEffect(() => {
+    if (!tourMatch || dbTourQuery.isLoading) return;
+    if (!dbTourQuery.data) {
+      setMode("chooser");
+      notify("That tour is unavailable");
+      return;
+    }
+
+    const propertyData = dbTourQuery.data.propertyData as { subtitle?: string; eyebrow?: string; facts?: string[] };
+    setSelectedTour({
+      id: dbTourQuery.data.slug,
+      title: dbTourQuery.data.title,
+      subtitle: propertyData.subtitle ?? "Spatial Key public tour",
+      eyebrow: propertyData.eyebrow ?? "SPATIAL KEY / PUBLIC TOUR",
+      image: dbTourQuery.data.coverImageUrl ?? tours[1].image,
+      description: dbTourQuery.data.description ?? "A browser-ready property tour captured with Spatial Key.",
+      facts: propertyData.facts ?? tours[1].facts,
+    });
+    setMode("tour");
+  }, [dbTourQuery.data, dbTourQuery.isLoading, tourMatch]);
 
   const stopCamera = () => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -206,6 +246,24 @@ export default function Home() {
     setMode("tour");
   };
 
+  const createTourFromScan = () => {
+    createTourMutation.mutate({
+      title: "Olive House",
+      description: "A warm, light-filled family home designed around the rhythm of the day.",
+      coverImageUrl: tours[1].image,
+      propertyData: {
+        subtitle: "Westlake, Texas · Spatial Key original",
+        eyebrow: "RESIDENTIAL / 04",
+        facts: ["4 beds", "3.5 baths", "3,640 sq ft"],
+        rooms,
+        source: "simulated-scan",
+      },
+    }, {
+      onSuccess: ({ slug }) => setLocation(`/tour/${slug}`),
+      onError: () => notify("We couldn't save this tour. Please try again."),
+    });
+  };
+
   const openTourBrowser = () => setMode("browse");
 
   return (
@@ -284,7 +342,7 @@ export default function Home() {
               {scanState === "complete" ? (
                 <div className="scan-complete-actions">
                   <div className="scan-summary"><Check size={14} /> 6 ROOMS READY TO EXPLORE</div>
-                  <button className="scan-button" onClick={() => openTour("living")}><span>VIEW YOUR TOUR</span><ArrowUpRight size={18} /></button>
+                  <button className="scan-button" onClick={createTourFromScan} disabled={createTourMutation.isPending}><span>{createTourMutation.isPending ? "SAVING TOUR" : "VIEW YOUR TOUR"}</span><ArrowUpRight size={18} /></button>
                   <button className="scan-secondary-action" onClick={() => { setScanProgress(0); setScanState("ready"); }}>SCAN ANOTHER ROOM</button>
                 </div>
               ) : (
