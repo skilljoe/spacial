@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { Fragment, useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import PropertyScene, { type RoomId } from "@/components/PropertyScene";
 
-type Mode = "chooser" | "tour" | "scan";
+type Mode = "chooser" | "browse" | "tour" | "scan";
 type ScanState = "ready" | "capturing" | "complete";
 type CameraStatus = "idle" | "requesting" | "active" | "denied" | "unsupported";
 
@@ -46,8 +46,14 @@ const scanStages = [
   { threshold: 100, label: "Space captured", hint: "Your 3D space is ready to explore" },
 ];
 
+const tours = [
+  { id: "fallingwater", title: "Fallingwater", subtitle: "Frank Lloyd Wright · Mill Run, Pennsylvania", eyebrow: "ARCHITECTURE / 01", image: "/manus-storage/fallingwater-demo_db8fdb91.jpg", description: "Walk through Wright’s house built over Bear Run — a landmark of organic architecture, captured for the web.", facts: ["1935 design", "9,300 sq ft", "Bear Run reserve"] },
+  { id: "olive-house", title: "Olive House", subtitle: "Westlake, Texas · Spatial Key original", eyebrow: "RESIDENTIAL / 04", image: "/manus-storage/linen-room_1595b9ca.jpg", description: "A warm, light-filled family home designed around the rhythm of the day.", facts: ["4 beds", "3.5 baths", "3,640 sq ft"] },
+] as const;
+
 export default function Home() {
   const [mode, setMode] = useState<Mode>("chooser");
+  const [selectedTour, setSelectedTour] = useState<(typeof tours)[number]>(tours[0]);
   const [room, setRoom] = useState<RoomId>("living");
   const [started, setStarted] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
@@ -194,11 +200,13 @@ export default function Home() {
     setMode("tour");
   };
 
+  const openTourBrowser = () => setMode("browse");
+
   return (
     <main className="tour-shell">
       <div className="ambient-orb ambient-orb-left" />
       <div className="ambient-orb ambient-orb-right" />
-      <section className={`tour-stage ${mode === "chooser" ? "launcher-mode" : ""} ${mode === "scan" ? "scan-mode" : ""}`} aria-label="Spatial Key mobile app">
+      <section className={`tour-stage ${mode === "chooser" ? "launcher-mode" : ""} ${mode === "browse" ? "browse-mode" : ""} ${mode === "scan" ? "scan-mode" : ""}`} aria-label="Spatial Key mobile app">
         <PropertyScene room={room} onInteract={() => setStarted(true)} />
         <div className="scene-vignette" />
 
@@ -234,7 +242,7 @@ export default function Home() {
                 <span><strong>Scan a space</strong><small>Capture a room in 20 min</small></span>
                 <ArrowUpRight size={18} />
               </button>
-              <button className="entry-card entry-card-secondary" onClick={() => openTour()}>
+              <button className="entry-card entry-card-secondary" onClick={openTourBrowser}>
                 <span className="entry-icon"><Camera size={20} /></span>
                 <span><strong>Explore a tour</strong><small>Walk through Olive House</small></span>
                 <ArrowUpRight size={18} />
@@ -285,11 +293,29 @@ export default function Home() {
           </section>
         )}
 
+        {mode === "browse" && (
+          <section className="tour-browser" aria-label="Explore featured tours">
+            <div className="browser-heading"><div><span className="welcome-index">SPATIAL KEY / OPEN COLLECTION</span><h1>Go somewhere<br /><em>remarkable.</em></h1></div><span className="browser-count">{tours.length.toString().padStart(2, "0")} TOURS</span></div>
+            <p className="browser-intro">A small collection of places worth getting lost in — available in your browser, wherever you are.</p>
+            <div className="tour-cards">
+              {tours.map((tour) => (
+                <button key={tour.id} className={`tour-card ${selectedTour.id === tour.id ? "selected" : ""}`} onClick={() => setSelectedTour(tour)}>
+                  <img src={tour.image} alt="" /><div className="tour-card-shade" />
+                  <div className="tour-card-copy"><span>{tour.eyebrow}</span><strong>{tour.title}</strong><small>{tour.subtitle}</small></div>
+                  {selectedTour.id === tour.id && <span className="tour-card-check"><Check size={15} /></span>}
+                </button>
+              ))}
+            </div>
+            <div className="selected-tour-detail"><div><span className="welcome-index">{selectedTour.eyebrow}</span><h2>{selectedTour.title}</h2><p>{selectedTour.description}</p><div className="tour-facts">{selectedTour.facts.map((fact) => <span key={fact}>{fact}</span>)}</div></div><button className="scan-button" onClick={() => openTour("living")}><span>ENTER TOUR</span><ArrowUpRight size={18} /></button></div>
+            <div className="browser-footnote">FALLINGWATER FACTS SOURCED FROM THE WESTERN PENNSYLVANIA CONSERVANCY <Info size={13} /></div>
+          </section>
+        )}
+
         {mode === "tour" && !started && (
           <div className="welcome-card">
-            <div className="welcome-index">04 / OLIVE HOUSE</div>
-            <h1>Walk through<br />before you arrive.</h1>
-            <p>A living, phone-first 3D view — captured with light, space, and a little bit of magic.</p>
+            <div className="welcome-index">{selectedTour.eyebrow}</div>
+            <h1>Walk through<br />{selectedTour.title}.</h1>
+            <p>{selectedTour.description}</p>
             <button className="explore-button" onClick={() => setStarted(true)}><span>ENTER THE HOME</span><ArrowUpRight size={18} /></button>
           </div>
         )}
@@ -300,9 +326,9 @@ export default function Home() {
             <div className="scene-controls"><div className="zoom-control" aria-label="Camera zoom controls"><button aria-label="Zoom in" onClick={() => notify("Pinch the scene to move closer")}><Plus size={17} /></button><span /><button aria-label="Zoom out" onClick={() => notify("Pinch the scene to pull back")}><Minus size={17} /></button></div><button className="icon-button glass-control" aria-label="Enter fullscreen" onClick={toggleFullscreen}><Expand size={18} strokeWidth={1.8} /></button></div>
             <div className="gesture-hint"><Move3D size={15} /><span>DRAG TO LOOK AROUND</span></div>
             <section className="bottom-panel">
-              <div className="listing-overline">FOR SALE · WESTLAKE, TX</div>
-              <div className="listing-grid"><div className="listing-copy"><h2>Olive House</h2><p><Compass size={15} /> 1720 Cedar Creek Road</p></div><div className="price-block"><span>ASKING PRICE</span><strong>$2.48M</strong></div></div>
-              <div className="property-facts" aria-label="Property details"><span>4 Beds</span><i /><span>3.5 Baths</span><i /><span>3,640 sq ft</span></div>
+              <div className="listing-overline">{selectedTour.id === "fallingwater" ? "ARCHITECTURE DEMO · MILL RUN, PA" : "FOR SALE · WESTLAKE, TX"}</div>
+              <div className="listing-grid"><div className="listing-copy"><h2>{selectedTour.title}</h2><p><Compass size={15} /> {selectedTour.id === "fallingwater" ? "1491 Mill Run Road" : "1720 Cedar Creek Road"}</p></div><div className="price-block"><span>{selectedTour.id === "fallingwater" ? "OPEN DEMO" : "ASKING PRICE"}</span><strong>{selectedTour.id === "fallingwater" ? "1935" : "$2.48M"}</strong></div></div>
+              <div className="property-facts" aria-label="Property details">{selectedTour.facts.map((fact, index) => <Fragment key={fact}><span>{fact}</span>{index < selectedTour.facts.length - 1 && <i />}</Fragment>)}</div>
               <div className="room-strip" aria-label="Choose a room"><button className="room-nav" aria-label="Previous room" onClick={() => changeRoom(-1)}><ChevronLeft size={19} /></button><div className="room-tabs">{rooms.map((item) => <button key={item.id} className={room === item.id ? "room-tab active" : "room-tab"} onClick={() => { setRoom(item.id); setStarted(true); }}><span>{item.index}</span>{item.label}</button>)}</div><button className="room-nav" aria-label="Next room" onClick={() => changeRoom(1)}><ChevronRight size={19} /></button></div>
               <div className="panel-actions"><button className="text-action" onClick={() => setGalleryOpen(true)}><GalleryVerticalEnd size={17} /> VIEW STILL CAPTURE</button><button className={liked ? "heart-action liked" : "heart-action"} aria-label="Save property" onClick={() => { setLiked(!liked); notify(liked ? "Removed from saved homes" : "Saved to your homes"); }}><Heart size={19} fill={liked ? "currentColor" : "none"} /></button></div>
             </section>
@@ -316,11 +342,11 @@ export default function Home() {
         <h2>Scan once.<br />Be there again.</h2>
         <p>Capture a place with your phone and turn it into a browser-ready 3D space. Or open a saved tour and walk through from wherever you are.</p>
         <div className="drawer-stat"><span>CAPTURE</span><strong>iPhone + 20 min</strong></div><div className="drawer-stat"><span>FORMAT</span><strong>WebGL / PlayCanvas</strong></div>
-        <button className="drawer-link" onClick={() => { setInfoOpen(false); openTour("living"); }}>TRY A TOUR <ArrowUpRight size={17} /></button>
+        <button className="drawer-link" onClick={() => { setInfoOpen(false); openTourBrowser(); }}>EXPLORE TOURS <ArrowUpRight size={17} /></button>
       </aside>
 
       {galleryOpen && <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Olive House still capture"><div className="gallery-modal"><button className="modal-close" onClick={() => setGalleryOpen(false)} aria-label="Close capture"><X size={20} /></button><img src="/manus-storage/linen-room_1595b9ca.jpg" alt="Warmly lit interior reference for Olive House" /><div className="gallery-copy"><span>REFERENCE STILL / 01</span><h2>Light moves first.</h2><p>A material and atmosphere cue for the virtual walkthrough.</p></div></div></div>}
-      {menuOpen && <div className="mobile-menu" role="dialog" aria-modal="true" aria-label="Tour menu"><button className="drawer-close" onClick={() => setMenuOpen(false)} aria-label="Close menu"><X size={20} /></button><span className="menu-eyebrow">SPATIAL KEY / MOBILE 01</span><button onClick={() => { setMenuOpen(false); setMode("chooser"); }}><ScanLine size={19} /> START A SCAN</button><button onClick={() => { setMenuOpen(false); openTour(); }}><Camera size={19} /> EXPLORE A TOUR</button><button onClick={() => { setMenuOpen(false); shareTour(); }}><Share2 size={19} /> SHARE TOUR</button><button onClick={() => { setMenuOpen(false); setInfoOpen(true); }}><Info size={19} /> HOW IT WORKS</button></div>}
+      {menuOpen && <div className="mobile-menu" role="dialog" aria-modal="true" aria-label="Tour menu"><button className="drawer-close" onClick={() => setMenuOpen(false)} aria-label="Close menu"><X size={20} /></button><span className="menu-eyebrow">SPATIAL KEY / MOBILE 01</span><button onClick={() => { setMenuOpen(false); setMode("chooser"); }}><ScanLine size={19} /> START A SCAN</button><button onClick={() => { setMenuOpen(false); openTourBrowser(); }}><Camera size={19} /> EXPLORE A TOUR</button><button onClick={() => { setMenuOpen(false); shareTour(); }}><Share2 size={19} /> SHARE TOUR</button><button onClick={() => { setMenuOpen(false); setInfoOpen(true); }}><Info size={19} /> HOW IT WORKS</button></div>}
       {mode === "tour" && <button className="info-fab" onClick={() => setInfoOpen(true)} aria-label="About this interactive tour"><Info size={19} /></button>}
       {notice && <div className="toast-message" role="status">{notice}</div>}
     </main>

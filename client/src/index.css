@@ -69,6 +69,8 @@ button:focus-visible { outline: 2px solid #f2d6ae; outline-offset: 3px; }
 
 .launcher-mode .property-canvas { filter: saturate(.82) brightness(.5); transform: scale(1.04); }
 .launcher-mode .scene-vignette { background: linear-gradient(180deg, rgba(7,11,8,.78) 0%, rgba(7,11,8,.25) 39%, rgba(7,11,8,.84) 100%), radial-gradient(circle at 50% 50%, transparent 18%, rgba(4,6,5,.5) 100%); }
+.browse-mode .property-canvas { filter: saturate(.42) brightness(.28); transform: scale(1.05); }
+.browse-mode .scene-vignette { background: linear-gradient(180deg, rgba(7,11,8,.84), rgba(7,11,8,.55) 40%, rgba(7,11,8,.94)); }
 .app-launcher { position: absolute; z-index: 6; left: 50%; top: 49%; width: min(510px, calc(100% - 36px)); transform: translate(-50%, -50%); }
 .launcher-heading { display: flex; align-items: center; justify-content: space-between; }
 .launcher-pill { padding: 5px 7px 4px; color: #dce1ba; border: 1px solid rgba(220,225,186,.36); font: 500 8px "DM Mono", monospace; letter-spacing: .12em; }
@@ -87,6 +89,31 @@ button:focus-visible { outline: 2px solid #f2d6ae; outline-offset: 3px; }
 .entry-card small { color: inherit; opacity: .62; font-size: 11px; }
 .launcher-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 25px; color: rgba(244,240,232,.5); font: 500 8px "DM Mono", monospace; letter-spacing: .1em; }
 .ghost-link { display: inline-flex; align-items: center; gap: 6px; padding: 0; color: #dce1ba; background: transparent; border: 0; cursor: pointer; font: 500 9px "DM Mono", monospace; letter-spacing: .08em; }
+
+.tour-browser { position: absolute; z-index: 6; left: 50%; top: 50%; width: min(900px, calc(100% - 72px)); transform: translate(-50%, -50%); }
+.browser-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; }
+.browser-heading h1 { margin: 13px 0 0; font: 500 clamp(45px, 6vw, 75px)/.91 "Playfair Display", serif; letter-spacing: -.06em; }
+.browser-heading h1 em { color: #dce1ba; font-style: italic; }
+.browser-count { color: rgba(244,240,232,.55); font: 500 9px "DM Mono", monospace; letter-spacing: .11em; padding-bottom: 6px; }
+.browser-intro { width: min(420px, 100%); margin: 16px 0 20px; color: rgba(244,240,232,.67); font-size: 13px; line-height: 1.5; }
+.tour-cards { display: grid; grid-template-columns: 1.25fr .85fr; gap: 10px; }
+.tour-card { position: relative; min-height: 175px; overflow: hidden; padding: 0; color: var(--ink); text-align: left; border: 1px solid rgba(244,240,232,.2); background: #1a201a; cursor: pointer; transition: transform 180ms cubic-bezier(.23,1,.32,1), border-color 180ms ease; }
+.tour-card:hover, .tour-card.selected { border-color: rgba(220,225,186,.78); transform: translateY(-2px); }
+.tour-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: saturate(.8) brightness(.72); transition: transform 500ms cubic-bezier(.23,1,.32,1); }
+.tour-card:hover img { transform: scale(1.04); }
+.tour-card-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5,8,5,.08), rgba(5,8,5,.84)); }
+.tour-card-copy { position: absolute; left: 15px; right: 15px; bottom: 14px; display: grid; gap: 4px; }
+.tour-card-copy span { color: #dce1ba; font: 500 8px "DM Mono", monospace; letter-spacing: .12em; }
+.tour-card-copy strong { font: 500 27px "Playfair Display", serif; letter-spacing: -.04em; }
+.tour-card-copy small { color: rgba(244,240,232,.68); font-size: 10px; }
+.tour-card-check { position: absolute; top: 12px; right: 12px; display: grid; place-items: center; width: 25px; height: 25px; color: #182018; background: #dce1ba; border-radius: 50%; }
+.selected-tour-detail { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-top: 13px; padding: 16px 17px; background: rgba(18,24,18,.82); border: 1px solid rgba(244,240,232,.17); backdrop-filter: blur(16px); }
+.selected-tour-detail h2 { margin: 6px 0 5px; font: 500 29px "Playfair Display", serif; letter-spacing: -.04em; }
+.selected-tour-detail p { width: min(470px, 100%); margin: 0; color: rgba(244,240,232,.66); font-size: 12px; line-height: 1.45; }
+.tour-facts { display: flex; gap: 12px; margin-top: 12px; color: #dce1ba; font: 500 9px "DM Mono", monospace; letter-spacing: .05em; }
+.tour-facts span + span { padding-left: 12px; border-left: 1px solid rgba(244,240,232,.19); }
+.selected-tour-detail .scan-button { flex: 0 0 auto; min-width: 145px; }
+.browser-footnote { display: flex; align-items: center; gap: 6px; margin-top: 13px; color: rgba(244,240,232,.43); font: 500 8px "DM Mono", monospace; letter-spacing: .08em; }
 
 .scan-mode .property-canvas { filter: saturate(.58) brightness(.42) contrast(1.15); }
 .scan-mode .scene-vignette { background: linear-gradient(180deg, rgba(8,12,9,.86) 0%, rgba(7,11,8,.08) 28%, rgba(7,11,8,.82) 100%); }
@@ -197,6 +224,20 @@ button:focus-visible { outline: 2px solid #f2d6ae; outline-offset: 3px; }
 @keyframes scan-sweep { 0%, 100% { transform: translateY(0); opacity: .3; } 50% { transform: translateY(270px); opacity: 1; } }
 
 @media (max-width: 700px) {
+  .tour-browser { top: 49%; width: calc(100% - 32px); }
+  .browser-heading { align-items: start; }
+  .browser-heading h1 { font-size: clamp(43px, 13vw, 60px); }
+  .browser-count { padding-top: 5px; white-space: nowrap; }
+  .browser-intro { margin: 13px 0 15px; font-size: 12px; }
+  .tour-cards { display: flex; overflow-x: auto; gap: 8px; margin-right: -16px; padding-right: 16px; scrollbar-width: none; }
+  .tour-cards::-webkit-scrollbar { display: none; }
+  .tour-card { flex: 0 0 75vw; min-height: 146px; }
+  .tour-card-copy strong { font-size: 24px; }
+  .selected-tour-detail { display: grid; gap: 14px; margin-top: 10px; padding: 14px; }
+  .selected-tour-detail h2 { font-size: 26px; }
+  .selected-tour-detail p { font-size: 11px; }
+  .selected-tour-detail .scan-button { width: 100%; }
+  .browser-footnote { font-size: 7px; line-height: 1.4; }
   .tour-stage { min-height: 100dvh; }
   .topbar { height: 77px; padding: 16px 16px; }
   .brand-lockup { margin-left: 0; font-size: 9px; }
