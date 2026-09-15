@@ -164,6 +164,10 @@ button:focus-visible { outline: 2px solid #f2d6ae; outline-offset: 3px; }
 .scene-caption div { display: grid; gap: 3px; }
 .scene-caption strong { font-size: 14px; font-weight: 600; }
 .scene-caption span:last-child { font-size: 11px; color: var(--muted); }
+.splat-status { display: inline-flex; align-items: center; gap: 5px; margin-top: 3px; color: #dce1ba; font: 500 8px "DM Mono", monospace; letter-spacing: .08em; }
+.splat-status i { width: 5px; height: 5px; border-radius: 50%; background: #a9e76b; box-shadow: 0 0 0 3px rgba(169,231,107,.12); }
+.splat-status.loading i { background: #e8bd6d; box-shadow: 0 0 0 3px rgba(232,189,109,.12); }
+.splat-status.fallback i { background: #db785a; box-shadow: 0 0 0 3px rgba(219,120,90,.12); }
 .scene-controls { position: absolute; z-index: 6; right: 27px; bottom: 255px; display: grid; gap: 10px; }
 .zoom-control { display: grid; overflow: hidden; border: 1px solid rgba(244,240,232,.21); background: rgba(13,17,14,.37); backdrop-filter: blur(12px); }
 .zoom-control button { display: grid; place-items: center; width: 43px; height: 39px; border: 0; background: transparent; cursor: pointer; transition: background 160ms ease; }

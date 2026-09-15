@@ -22,7 +22,7 @@ import {
   VolumeX,
   X,
 } from "lucide-react";
-import PropertyScene, { type RoomId } from "@/components/PropertyScene";
+import PropertyScene, { type RoomId, type SplatStatus } from "@/components/PropertyScene";
 
 type Mode = "chooser" | "browse" | "tour" | "scan";
 type ScanState = "ready" | "capturing" | "complete";
@@ -54,6 +54,7 @@ const tours = [
 export default function Home() {
   const [mode, setMode] = useState<Mode>("chooser");
   const [selectedTour, setSelectedTour] = useState<(typeof tours)[number]>(tours[0]);
+  const [splatStatus, setSplatStatus] = useState<SplatStatus>("loading");
   const [room, setRoom] = useState<RoomId>("living");
   const [started, setStarted] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
@@ -207,7 +208,7 @@ export default function Home() {
       <div className="ambient-orb ambient-orb-left" />
       <div className="ambient-orb ambient-orb-right" />
       <section className={`tour-stage ${mode === "chooser" ? "launcher-mode" : ""} ${mode === "browse" ? "browse-mode" : ""} ${mode === "scan" ? "scan-mode" : ""}`} aria-label="Spatial Key mobile app">
-        <PropertyScene room={room} onInteract={() => setStarted(true)} />
+        <PropertyScene room={room} onInteract={() => setStarted(true)} onSplatStatus={setSplatStatus} />
         <div className="scene-vignette" />
 
         <header className="topbar">
@@ -322,7 +323,7 @@ export default function Home() {
 
         {mode === "tour" && (
           <>
-            <div className="scene-caption" aria-live="polite"><span className="caption-marker">{activeRoom.index}</span><div><strong>{activeRoom.label}</strong><span>{activeRoom.detail}</span></div></div>
+            <div className="scene-caption" aria-live="polite"><span className="caption-marker">{activeRoom.index}</span><div><strong>{activeRoom.label}</strong><span>{activeRoom.detail}</span>{room === "living" && <small className={`splat-status ${splatStatus}`}><i /> {splatStatus === "ready" ? "REAL SPLAT" : splatStatus === "loading" ? "LOADING SCAN" : "PREVIEW MODEL"}</small>}</div></div>
             <div className="scene-controls"><div className="zoom-control" aria-label="Camera zoom controls"><button aria-label="Zoom in" onClick={() => notify("Pinch the scene to move closer")}><Plus size={17} /></button><span /><button aria-label="Zoom out" onClick={() => notify("Pinch the scene to pull back")}><Minus size={17} /></button></div><button className="icon-button glass-control" aria-label="Enter fullscreen" onClick={toggleFullscreen}><Expand size={18} strokeWidth={1.8} /></button></div>
             <div className="gesture-hint"><Move3D size={15} /><span>DRAG TO LOOK AROUND</span></div>
             <section className="bottom-panel">

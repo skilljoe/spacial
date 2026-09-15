@@ -2,10 +2,13 @@ import { useEffect, useRef } from "react";
 import * as pc from "playcanvas";
 
 export type RoomId = "living" | "kitchen" | "terrace" | "dining" | "bedroom" | "bath";
+export const LIVING_ROOM_SPLAT_URL = "/manus-storage/livingroom_977ac24a.sog";
+export type SplatStatus = "loading" | "ready" | "fallback";
 
 type PropertySceneProps = {
   room: RoomId;
   onInteract?: () => void;
+  onSplatStatus?: (status: SplatStatus) => void;
 };
 
 type SceneApi = {
@@ -13,7 +16,7 @@ type SceneApi = {
 };
 
 const roomViews: Record<RoomId, { target: [number, number, number]; yaw: number; pitch: number; radius: number }> = {
-  living: { target: [0, 1.45, -0.4], yaw: -28, pitch: 3, radius: 7.8 },
+  living: { target: [0, 0, -0.15], yaw: -20, pitch: 0, radius: 4.2 },
   kitchen: { target: [1.6, 1.45, -0.1], yaw: -76, pitch: 4, radius: 6.1 },
   terrace: { target: [-1.8, 1.45, -1.1], yaw: 26, pitch: 1, radius: 7.1 },
   dining: { target: [1.2, 1.25, -2.05], yaw: -112, pitch: 4, radius: 5.7 },
@@ -65,7 +68,7 @@ function addSphere(
   return entity;
 }
 
-export default function PropertyScene({ room, onInteract }: PropertySceneProps) {
+export default function PropertyScene({ room, onInteract, onSplatStatus }: PropertySceneProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const sceneRef = useRef<SceneApi | null>(null);
 
@@ -90,6 +93,24 @@ export default function PropertyScene({ room, onInteract }: PropertySceneProps) 
 
     const root = new pc.Entity("Olive House");
     app.root.addChild(root);
+
+    let splatLoaded = false;
+    let activeRoom: RoomId = "living";
+    const splatAsset = new pc.Asset("living-room-splat", "gsplat", { url: LIVING_ROOM_SPLAT_URL });
+    const splat = new pc.Entity("Living room scan");
+    splat.addComponent("gsplat", { asset: splatAsset });
+    splat.enabled = false;
+    app.root.addChild(splat);
+    onSplatStatus?.("loading");
+    splatAsset.on("load", () => {
+      splatLoaded = true;
+      splat.enabled = activeRoom === "living";
+      root.enabled = activeRoom !== "living";
+      onSplatStatus?.("ready");
+    });
+    splatAsset.on("error", () => onSplatStatus?.("fallback"));
+    app.assets.add(splatAsset);
+    app.assets.load(splatAsset);
 
     const camera = new pc.Entity("camera");
     camera.addComponent("camera", { fov: 58, nearClip: 0.1, farClip: 100, clearColor: new pc.Color(0.055, 0.067, 0.065) });
@@ -202,6 +223,9 @@ export default function PropertyScene({ room, onInteract }: PropertySceneProps) 
 
     const goToRoom = (nextRoom: RoomId) => {
       const view = roomViews[nextRoom];
+      activeRoom = nextRoom;
+      splat.enabled = nextRoom === "living" && splatLoaded;
+      root.enabled = nextRoom !== "living" || !splatLoaded;
       goal = new pc.Vec3(...view.target);
       goalYaw = view.yaw;
       goalPitch = view.pitch;
@@ -261,7 +285,7 @@ export default function PropertyScene({ room, onInteract }: PropertySceneProps) 
       canvas.removeEventListener("wheel", handleWheel);
       app.destroy();
     };
-  }, [onInteract]);
+  }, []);
 
   useEffect(() => {
     sceneRef.current?.goToRoom(room);
