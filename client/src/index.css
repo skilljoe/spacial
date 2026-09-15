@@ -78,9 +78,15 @@ button:focus-visible { outline: 2px solid #f2d6ae; outline-offset: 3px; }
 .app-launcher h1 em { color: #dce1ba; font-style: italic; }
 .app-launcher > p { max-width: 325px; margin: 0 0 34px; color: rgba(244,240,232,.72); font-size: 14px; line-height: 1.55; letter-spacing: .01em; }
 .entry-actions { display: grid; gap: 10px; }
-.entry-card { display: grid; grid-template-columns: 38px 1fr auto; align-items: center; gap: 13px; width: 100%; padding: 15px 16px; text-align: left; cursor: pointer; border: 1px solid rgba(244,240,232,.22); border-radius: 3px; transition: transform 180ms cubic-bezier(.23,1,.32,1), background 180ms ease, border-color 180ms ease; }
-.entry-card:hover { transform: translateY(-2px); border-color: rgba(220,225,186,.65); }
-.entry-card:active { transform: scale(.98); }
+.entry-card { position: relative; isolation: isolate; display: grid; grid-template-columns: 38px 1fr auto; align-items: center; gap: 13px; width: 100%; padding: 15px 16px; overflow: hidden; text-align: left; cursor: pointer; border: 1px solid rgba(244,240,232,.22); border-radius: 3px; transition: transform 260ms cubic-bezier(.23,1,.32,1), background 260ms ease, border-color 260ms ease, box-shadow 260ms ease; }
+.entry-card::after { position: absolute; z-index: -1; top: -40%; left: -22%; width: 25%; height: 180%; content: ""; background: linear-gradient(90deg, transparent, rgba(244,240,232,.12), transparent); opacity: 0; transform: rotate(16deg) translateX(-180%); transition: transform 520ms cubic-bezier(.23,1,.32,1), opacity 220ms ease; }
+.entry-card:hover { transform: translateY(-3px); border-color: rgba(220,225,186,.62); box-shadow: 0 12px 28px rgba(0,0,0,.18); }
+.entry-card:hover::after { opacity: 1; transform: rotate(16deg) translateX(620%); }
+.entry-card:active { transform: translateY(-1px) scale(.985); transition-duration: 90ms; }
+.entry-card:focus-visible { outline: 1px solid #dce1ba; outline-offset: 4px; }
+.entry-card .entry-icon, .entry-card > svg { transition: transform 260ms cubic-bezier(.23,1,.32,1); }
+.entry-card:hover .entry-icon { transform: scale(1.06); }
+.entry-card:hover > svg { transform: translate(2px, -2px); }
 .entry-card-primary { color: #ebe9dc; background: rgba(32,39,31,.72); border-color: rgba(220,225,186,.48); backdrop-filter: blur(14px); }
 .entry-card-secondary { color: var(--ink); background: rgba(22,29,22,.48); backdrop-filter: blur(14px); }
 .entry-icon { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid currentColor; border-radius: 50%; }
