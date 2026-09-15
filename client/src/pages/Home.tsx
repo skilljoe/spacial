@@ -55,6 +55,9 @@ export default function Home() {
   const [mode, setMode] = useState<Mode>("chooser");
   const [selectedTour, setSelectedTour] = useState<(typeof tours)[number]>(tours[0]);
   const [splatStatus, setSplatStatus] = useState<SplatStatus>("loading");
+  const [splatProgress, setSplatProgress] = useState(0);
+  const [splatLoadedBytes, setSplatLoadedBytes] = useState(0);
+  const [splatTotalBytes, setSplatTotalBytes] = useState(40 * 1024 * 1024);
   const [room, setRoom] = useState<RoomId>("living");
   const [started, setStarted] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
@@ -76,6 +79,8 @@ export default function Home() {
   const activeRoom = rooms.find((item) => item.id === room) ?? rooms[0];
   const roomIndex = rooms.findIndex((item) => item.id === room);
   const activeScanStage = [...scanStages].reverse().find((stage) => scanProgress >= stage.threshold) ?? scanStages[0];
+  const isMobile = typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  const formatMb = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 
   const stopCamera = () => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -208,7 +213,7 @@ export default function Home() {
       <div className="ambient-orb ambient-orb-left" />
       <div className="ambient-orb ambient-orb-right" />
       <section className={`tour-stage ${mode === "chooser" ? "launcher-mode" : ""} ${mode === "browse" ? "browse-mode" : ""} ${mode === "scan" ? "scan-mode" : ""}`} aria-label="Spatial Key mobile app">
-        <PropertyScene room={room} onInteract={() => setStarted(true)} onSplatStatus={setSplatStatus} />
+        <PropertyScene room={room} onInteract={() => setStarted(true)} onSplatStatus={setSplatStatus} onSplatProgress={(progress, loaded, total) => { setSplatProgress(progress); setSplatLoadedBytes(loaded); setSplatTotalBytes(total); }} />
         <div className="scene-vignette" />
 
         <header className="topbar">
@@ -324,6 +329,7 @@ export default function Home() {
         {mode === "tour" && (
           <>
             <div className="scene-caption" aria-live="polite"><span className="caption-marker">{activeRoom.index}</span><div><strong>{activeRoom.label}</strong><span>{activeRoom.detail}</span>{room === "living" && <small className={`splat-status ${splatStatus}`}><i /> {splatStatus === "ready" ? "REAL SPLAT" : splatStatus === "loading" ? "LOADING SCAN" : "PREVIEW MODEL"}</small>}</div></div>
+            {room === "living" && splatStatus === "loading" && <div className="splat-loader" role="status" aria-live="polite"><div className="splat-loader-top"><span>LOADING LIVING ROOM SCAN</span><strong>{splatProgress}%</strong></div><div className="splat-loader-track"><span style={{ width: `${splatProgress}%` }} /></div><div className="splat-loader-meta"><span>{formatMb(splatLoadedBytes)} / {formatMb(splatTotalBytes)}</span>{isMobile && <span className="mobile-size-warning">MOBILE · LARGE ASSET</span>}</div><p>{isMobile ? "This scan is about 40 MB. Stay on Wi‑Fi for the best experience." : "Preparing the high-detail Gaussian Splat for your browser."}</p></div>}
             <div className="scene-controls"><div className="zoom-control" aria-label="Camera zoom controls"><button aria-label="Zoom in" onClick={() => notify("Pinch the scene to move closer")}><Plus size={17} /></button><span /><button aria-label="Zoom out" onClick={() => notify("Pinch the scene to pull back")}><Minus size={17} /></button></div><button className="icon-button glass-control" aria-label="Enter fullscreen" onClick={toggleFullscreen}><Expand size={18} strokeWidth={1.8} /></button></div>
             <div className="gesture-hint"><Move3D size={15} /><span>DRAG TO LOOK AROUND</span></div>
             <section className="bottom-panel">

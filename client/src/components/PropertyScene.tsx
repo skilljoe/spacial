@@ -9,6 +9,7 @@ type PropertySceneProps = {
   room: RoomId;
   onInteract?: () => void;
   onSplatStatus?: (status: SplatStatus) => void;
+  onSplatProgress?: (progress: number, loadedBytes: number, totalBytes: number) => void;
 };
 
 type SceneApi = {
@@ -68,7 +69,7 @@ function addSphere(
   return entity;
 }
 
-export default function PropertyScene({ room, onInteract, onSplatStatus }: PropertySceneProps) {
+export default function PropertyScene({ room, onInteract, onSplatStatus, onSplatProgress }: PropertySceneProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const sceneRef = useRef<SceneApi | null>(null);
 
@@ -96,21 +97,57 @@ export default function PropertyScene({ room, onInteract, onSplatStatus }: Prope
 
     let splatLoaded = false;
     let activeRoom: RoomId = "living";
-    const splatAsset = new pc.Asset("living-room-splat", "gsplat", { url: LIVING_ROOM_SPLAT_URL });
     const splat = new pc.Entity("Living room scan");
-    splat.addComponent("gsplat", { asset: splatAsset });
     splat.enabled = false;
     app.root.addChild(splat);
     onSplatStatus?.("loading");
-    splatAsset.on("load", () => {
-      splatLoaded = true;
-      splat.enabled = activeRoom === "living";
-      root.enabled = activeRoom !== "living";
-      onSplatStatus?.("ready");
-    });
-    splatAsset.on("error", () => onSplatStatus?.("fallback"));
-    app.assets.add(splatAsset);
-    app.assets.load(splatAsset);
+    let objectUrl = "";
+    let splatAsset: pc.Asset | null = null;
+    const loadSplat = async () => {
+      try {
+        const response = await fetch(LIVING_ROOM_SPLAT_URL);
+        if (!response.ok) throw new Error(`SOG request failed: ${response.status}`);
+        const totalBytes = Number(response.headers.get("content-length")) || 40 * 1024 * 1024;
+        let loadedBytes = 0;
+        const chunks: Uint8Array[] = [];
+        if (response.body) {
+          const reader = response.body.getReader();
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (value) {
+              chunks.push(value);
+              loadedBytes += value.byteLength;
+              onSplatProgress?.(Math.min(99, Math.round((loadedBytes / totalBytes) * 100)), loadedBytes, totalBytes);
+            }
+          }
+        } else {
+          const buffer = new Uint8Array(await response.arrayBuffer());
+          chunks.push(buffer);
+          loadedBytes = buffer.byteLength;
+          onSplatProgress?.(99, loadedBytes, totalBytes);
+        }
+        const bytes = new Uint8Array(loadedBytes);
+        let offset = 0;
+        chunks.forEach((chunk) => { bytes.set(chunk, offset); offset += chunk.byteLength; });
+        objectUrl = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
+        splatAsset = new pc.Asset("living-room-splat", "gsplat", { url: objectUrl });
+        splat.addComponent("gsplat", { asset: splatAsset });
+        splatAsset.on("load", () => {
+          splatLoaded = true;
+          splat.enabled = activeRoom === "living";
+          root.enabled = activeRoom !== "living";
+          onSplatProgress?.(100, loadedBytes, totalBytes);
+          onSplatStatus?.("ready");
+        });
+        splatAsset.on("error", () => onSplatStatus?.("fallback"));
+        app.assets.add(splatAsset);
+        app.assets.load(splatAsset);
+      } catch {
+        onSplatStatus?.("fallback");
+      }
+    };
+    void loadSplat();
 
     const camera = new pc.Entity("camera");
     camera.addComponent("camera", { fov: 58, nearClip: 0.1, farClip: 100, clearColor: new pc.Color(0.055, 0.067, 0.065) });
@@ -284,6 +321,8 @@ export default function PropertyScene({ room, onInteract, onSplatStatus }: Prope
       canvas.removeEventListener("pointercancel", releasePointer);
       canvas.removeEventListener("wheel", handleWheel);
       app.destroy();
+      if (splatAsset) app.assets.remove(splatAsset);
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, []);
 
