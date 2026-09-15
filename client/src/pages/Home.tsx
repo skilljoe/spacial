@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -26,6 +26,7 @@ import PropertyScene, { type RoomId } from "@/components/PropertyScene";
 
 type Mode = "chooser" | "tour" | "scan";
 type ScanState = "ready" | "capturing" | "complete";
+type CameraStatus = "idle" | "requesting" | "active" | "denied" | "unsupported";
 
 const rooms: { id: RoomId; label: string; index: string; detail: string }[] = [
   { id: "living", label: "Living room", index: "01", detail: "Window light & lounge" },
@@ -52,6 +53,13 @@ export default function Home() {
   const [soundOn, setSoundOn] = useState(true);
   const [scanState, setScanState] = useState<ScanState>("ready");
   const [scanProgress, setScanProgress] = useState(0);
+  const [cameraStatus, setCameraStatus] = useState<CameraStatus>("idle");
+  const [motionEnabled, setMotionEnabled] = useState(false);
+  const [deviceTilt, setDeviceTilt] = useState(0);
+  const [cameraMessage, setCameraMessage] = useState("");
+  const cameraRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const motionCleanupRef = useRef<(() => void) | null>(null);
   const [infoOpen, setInfoOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -61,6 +69,68 @@ export default function Home() {
   const activeRoom = rooms.find((item) => item.id === room) ?? rooms[0];
   const roomIndex = rooms.findIndex((item) => item.id === room);
   const activeScanStage = [...scanStages].reverse().find((stage) => scanProgress >= stage.threshold) ?? scanStages[0];
+
+  const stopCamera = () => {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    if (cameraRef.current) cameraRef.current.srcObject = null;
+  };
+
+  const requestMotionAccess = async () => {
+    if (typeof DeviceOrientationEvent === "undefined") return false;
+    const orientation = DeviceOrientationEvent as typeof DeviceOrientationEvent & {
+      requestPermission?: () => Promise<"granted" | "denied">;
+    };
+    if (typeof orientation.requestPermission === "function") {
+      try {
+        const permission = await orientation.requestPermission();
+        if (permission !== "granted") return false;
+      } catch {
+        return false;
+      }
+    }
+    const handleOrientation = (event: DeviceOrientationEvent) => {
+      const tilt = Math.max(-28, Math.min(28, event.gamma ?? 0));
+      setDeviceTilt(tilt);
+    };
+    motionCleanupRef.current?.();
+    window.addEventListener("deviceorientation", handleOrientation, true);
+    motionCleanupRef.current = () => window.removeEventListener("deviceorientation", handleOrientation, true);
+    setMotionEnabled(true);
+  };
+
+  const requestCamera = async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraStatus("unsupported");
+      setCameraMessage("Live camera is unavailable here; simulation mode is ready.");
+      return;
+    }
+    setCameraStatus("requesting");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      });
+      streamRef.current = stream;
+      if (cameraRef.current) {
+        cameraRef.current.srcObject = stream;
+        await cameraRef.current.play();
+      }
+      setCameraStatus("active");
+      setCameraMessage("Camera live · motion guidance enabled when available");
+    } catch {
+      setCameraStatus("denied");
+      setCameraMessage("Camera access was blocked; simulation mode is ready.");
+    }
+  };
+
+  const enterScanMode = () => {
+    setScanProgress(0);
+    setScanState("ready");
+    setMode("scan");
+    void requestMotionAccess();
+    void requestCamera();
+  };
 
   useEffect(() => {
     if (scanState !== "capturing") return;
@@ -76,6 +146,15 @@ export default function Home() {
     }, 105);
     return () => window.clearInterval(timer);
   }, [scanState]);
+
+  useEffect(() => {
+    if (mode === "scan") return;
+    stopCamera();
+    motionCleanupRef.current?.();
+    motionCleanupRef.current = null;
+    setCameraStatus("idle");
+    setMotionEnabled(false);
+  }, [mode]);
 
   const notify = (message: string) => {
     setNotice(message);
@@ -150,7 +229,7 @@ export default function Home() {
             <h1>Space, in<br /><em>your hands.</em></h1>
             <p>Scan a place with your phone or step into a saved tour.</p>
             <div className="entry-actions">
-              <button className="entry-card entry-card-primary" onClick={() => { setScanProgress(0); setScanState("ready"); setMode("scan"); }}>
+              <button className="entry-card entry-card-primary" onClick={enterScanMode}>
                 <span className="entry-icon"><ScanLine size={21} /></span>
                 <span><strong>Scan a space</strong><small>Capture a room in 20 min</small></span>
                 <ArrowUpRight size={18} />
@@ -172,6 +251,8 @@ export default function Home() {
           <section className="scan-overlay" aria-label="Scan a space">
             <div className="scan-topline"><span>01 / NEW CAPTURE</span><span className="scan-live-chip"><i /> {scanState === "capturing" ? "CAPTURING" : scanState === "complete" ? "READY" : "ROOM SCAN"}</span></div>
             <div className="scan-viewport">
+              <video ref={cameraRef} className="scan-camera" style={{ "--device-tilt": `${deviceTilt}deg` } as CSSProperties} autoPlay muted playsInline aria-label="Live rear camera preview" />
+              {cameraStatus === "active" && <div className="camera-active-badge"><i /> CAMERA LIVE</div>}
               <div className="scan-grid" />
               <div className="scan-corners" />
               {scanState === "capturing" && <div className="scan-sweep" />}
@@ -197,7 +278,7 @@ export default function Home() {
                   <button className={scanState === "capturing" ? "scan-button scanning" : "scan-button"} disabled={scanState === "capturing"} onClick={() => { setScanProgress(2); setScanState("capturing"); }}>
                     {scanState === "capturing" ? <><span className="scanning-dot" /> CAPTURING {scanProgress}%</> : <><span>START SCAN</span><ScanLine size={18} /></>}
                   </button>
-                  <p>{scanState === "capturing" ? "Move slowly around the room · keep your phone level" : "Your camera stays on-device during this simulation"}</p>
+                  <p>{scanState === "capturing" ? "Move slowly around the room · keep your phone level" : cameraStatus === "requesting" ? "Requesting camera access..." : cameraMessage || "Camera access is optional in simulation mode"}</p>
                 </>
               )}
             </div>
