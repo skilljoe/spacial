@@ -92,11 +92,18 @@ button:focus-visible { outline: 2px solid #f2d6ae; outline-offset: 3px; }
 .scan-mode .scene-vignette { background: linear-gradient(180deg, rgba(8,12,9,.86) 0%, rgba(7,11,8,.08) 28%, rgba(7,11,8,.82) 100%); }
 .scan-overlay { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; justify-content: space-between; padding: 116px 7vw 36px; pointer-events: none; }
 .scan-topline { display: flex; justify-content: space-between; color: #dce1ba; font: 500 9px "DM Mono", monospace; letter-spacing: .12em; }
+.scan-live-chip { display: inline-flex; align-items: center; gap: 6px; }
+.scan-live-chip i { width: 5px; height: 5px; border-radius: 50%; background: #a9e76b; box-shadow: 0 0 0 4px rgba(169,231,107,.12); }
 .scan-viewport { position: relative; flex: 1; min-height: 330px; margin: 25px 0; border: 1px solid rgba(220,225,186,.35); overflow: hidden; }
 .scan-grid { position: absolute; inset: 0; opacity: .18; background-image: linear-gradient(rgba(220,225,186,.4) 1px, transparent 1px), linear-gradient(90deg, rgba(220,225,186,.4) 1px, transparent 1px); background-size: 52px 52px; transform: perspective(500px) rotateX(54deg) scale(1.5); transform-origin: bottom; }
 .scan-corners { position: absolute; inset: 15% 13%; border: 1px solid rgba(220,225,186,.7); clip-path: polygon(0 0, 18% 0, 18% 1px, 0 1px, 0 18%, 1px 18%, 1px 0, 100% 0, 100% 18%, calc(100% - 1px) 18%, calc(100% - 1px) 1px, 82% 1px, 82% 0, 100% 0, 100% 100%, 82% 100%, 82% calc(100% - 1px), calc(100% - 1px) calc(100% - 1px), calc(100% - 1px) 82%, 100% 82%, 100% 100%, 0 100%, 0 82%, 1px 82%, 1px calc(100% - 1px), 18% calc(100% - 1px), 18% 100%, 0 100%); }
+.scan-sweep { position: absolute; left: 10%; right: 10%; top: 19%; height: 1px; background: #dce1ba; box-shadow: 0 0 18px 3px rgba(220,225,186,.72); animation: scan-sweep 2.1s ease-in-out infinite; }
 .scan-target { position: absolute; left: 50%; top: 50%; display: grid; justify-items: center; gap: 8px; transform: translate(-50%, -50%); color: #dce1ba; text-align: center; }
-.scan-target svg { padding: 13px; width: 53px; height: 53px; border: 1px solid rgba(220,225,186,.52); border-radius: 50%; }
+.scan-progress-ring { position: relative; display: grid; place-items: center; width: 72px; height: 72px; border-radius: 50%; background: conic-gradient(#dce1ba var(--progress, 0deg), rgba(220,225,186,.17) 0deg); transition: background .18s linear; }
+.scan-progress-ring.active { box-shadow: 0 0 0 7px rgba(220,225,186,.06), 0 0 35px rgba(220,225,186,.19); }
+.scan-progress-track { position: absolute; inset: 4px; border-radius: 50%; background: #192019; }
+.scan-progress-value { position: relative; z-index: 1; display: grid; place-items: center; width: 58px; height: 58px; border-radius: 50%; border: 1px solid rgba(220,225,186,.27); }
+.scan-progress-value strong { font: 500 14px "DM Mono", monospace; }
 .scan-target strong { font-size: 15px; font-weight: 600; }
 .scan-target span { max-width: 250px; color: rgba(244,240,232,.64); font-size: 11px; }
 .scan-readout { position: absolute; left: 15px; right: 15px; bottom: 13px; display: flex; justify-content: space-between; color: rgba(244,240,232,.75); font: 500 9px "DM Mono", monospace; letter-spacing: .08em; }
@@ -111,6 +118,7 @@ button:focus-visible { outline: 2px solid #f2d6ae; outline-offset: 3px; }
 .scanning-dot { width: 6px; height: 6px; background: #db785a; border-radius: 50%; box-shadow: 0 0 0 5px rgba(219,120,90,.15); animation: pulse 1s ease-in-out infinite; }
 .scan-footer p { margin: 0; color: rgba(244,240,232,.56); font-size: 11px; }
 .scan-complete-actions { display: grid; justify-items: center; gap: 14px; }
+.scan-summary { display: inline-flex; align-items: center; gap: 7px; color: #dce1ba; font: 500 9px "DM Mono", monospace; letter-spacing: .1em; }
 .scan-secondary-action { padding: 0; color: #dce1ba; border: 0; background: transparent; cursor: pointer; font: 500 9px "DM Mono", monospace; letter-spacing: .1em; }
 
 .welcome-card { position: absolute; z-index: 5; top: 50%; left: clamp(25px, 9vw, 140px); transform: translateY(-50%); max-width: 425px; animation: reveal .85s cubic-bezier(.23,1,.32,1) both; }
@@ -143,7 +151,8 @@ button:focus-visible { outline: 2px solid #f2d6ae; outline-offset: 3px; }
 .property-facts { display: flex; align-items: center; gap: 9px; margin: 17px 0 15px; color: rgba(244,240,232,.75); font-size: 11px; }
 .property-facts i { width: 3px; height: 3px; background: rgba(244,240,232,.42); border-radius: 50%; }
 .room-strip { display: flex; align-items: center; border-top: 1px solid rgba(244,240,232,.15); border-bottom: 1px solid rgba(244,240,232,.15); }
-.room-tabs { flex: 1; min-width: 0; display: flex; overflow: hidden; }
+.room-tabs { flex: 1; min-width: 0; display: flex; overflow-x: auto; scrollbar-width: none; }
+.room-tabs::-webkit-scrollbar { display: none; }
 .room-tab { padding: 12px 10px; min-width: 0; flex: 1; border: 0; border-right: 1px solid rgba(244,240,232,.11); color: rgba(244,240,232,.5); background: transparent; cursor: pointer; font-size: 11px; text-align: center; transition: color 180ms ease, background 180ms ease; white-space: nowrap; }
 .room-tab span { margin-right: 5px; font: 500 9px "DM Mono", monospace; }
 .room-tab:hover, .room-tab.active { color: #f3f4d9; background: rgba(220,225,186,.12); }
@@ -182,6 +191,7 @@ button:focus-visible { outline: 2px solid #f2d6ae; outline-offset: 3px; }
 @keyframes modal-in { from { opacity: 0; transform: scale(.96) translateY(14px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }
 @keyframes pulse { 0%, 100% { opacity: .55; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.1); } }
+@keyframes scan-sweep { 0%, 100% { transform: translateY(0); opacity: .3; } 50% { transform: translateY(270px); opacity: 1; } }
 
 @media (max-width: 700px) {
   .tour-stage { min-height: 100dvh; }
@@ -209,6 +219,7 @@ button:focus-visible { outline: 2px solid #f2d6ae; outline-offset: 3px; }
   .price-block strong { font-size: 17px; }
   .property-facts { margin: 13px 0; gap: 7px; font-size: 10px; }
   .room-tab { padding: 11px 5px; font-size: 10px; }
+  .room-tab { flex: 0 0 auto; min-width: 111px; }
   .room-tab span { font-size: 8px; margin-right: 3px; }
   .panel-actions { margin-top: 10px; }
   .info-fab { display: none; }

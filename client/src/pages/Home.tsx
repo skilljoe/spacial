@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -31,6 +31,18 @@ const rooms: { id: RoomId; label: string; index: string; detail: string }[] = [
   { id: "living", label: "Living room", index: "01", detail: "Window light & lounge" },
   { id: "kitchen", label: "Kitchen", index: "02", detail: "Stone island & oak" },
   { id: "terrace", label: "Terrace", index: "03", detail: "Garden-facing outlook" },
+  { id: "dining", label: "Dining room", index: "04", detail: "Late afternoon light" },
+  { id: "bedroom", label: "Primary bedroom", index: "05", detail: "Quiet garden side" },
+  { id: "bath", label: "Primary bath", index: "06", detail: "Travertine & steam" },
+];
+
+const scanStages = [
+  { threshold: 0, label: "Ready to scan", hint: "Point your phone at the center of the room" },
+  { threshold: 16, label: "Finding surfaces", hint: "Slow pan left · keep the room in frame" },
+  { threshold: 39, label: "Building depth map", hint: "Keep moving · capture the corners" },
+  { threshold: 64, label: "Collecting light", hint: "Almost there · one more slow pass" },
+  { threshold: 88, label: "Finishing the space", hint: "Stitching your room into 3D" },
+  { threshold: 100, label: "Space captured", hint: "Your 3D space is ready to explore" },
 ];
 
 export default function Home() {
@@ -39,6 +51,7 @@ export default function Home() {
   const [started, setStarted] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
   const [scanState, setScanState] = useState<ScanState>("ready");
+  const [scanProgress, setScanProgress] = useState(0);
   const [infoOpen, setInfoOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -47,11 +60,21 @@ export default function Home() {
 
   const activeRoom = rooms.find((item) => item.id === room) ?? rooms[0];
   const roomIndex = rooms.findIndex((item) => item.id === room);
+  const activeScanStage = [...scanStages].reverse().find((stage) => scanProgress >= stage.threshold) ?? scanStages[0];
 
   useEffect(() => {
     if (scanState !== "capturing") return;
-    const timer = window.setTimeout(() => setScanState("complete"), 2800);
-    return () => window.clearTimeout(timer);
+    const timer = window.setInterval(() => {
+      setScanProgress((current) => {
+        const next = Math.min(100, current + 2);
+        if (next >= 100) {
+          window.clearInterval(timer);
+          setScanState("complete");
+        }
+        return next;
+      });
+    }, 105);
+    return () => window.clearInterval(timer);
   }, [scanState]);
 
   const notify = (message: string) => {
@@ -127,7 +150,7 @@ export default function Home() {
             <h1>Space, in<br /><em>your hands.</em></h1>
             <p>Scan a place with your phone or step into a saved tour.</p>
             <div className="entry-actions">
-              <button className="entry-card entry-card-primary" onClick={() => { setScanState("ready"); setMode("scan"); }}>
+              <button className="entry-card entry-card-primary" onClick={() => { setScanProgress(0); setScanState("ready"); setMode("scan"); }}>
                 <span className="entry-icon"><ScanLine size={21} /></span>
                 <span><strong>Scan a space</strong><small>Capture a room in 20 min</small></span>
                 <ArrowUpRight size={18} />
@@ -147,29 +170,34 @@ export default function Home() {
 
         {mode === "scan" && (
           <section className="scan-overlay" aria-label="Scan a space">
-            <div className="scan-topline"><span>01 / NEW CAPTURE</span><span>ROOM SCAN</span></div>
+            <div className="scan-topline"><span>01 / NEW CAPTURE</span><span className="scan-live-chip"><i /> {scanState === "capturing" ? "CAPTURING" : scanState === "complete" ? "READY" : "ROOM SCAN"}</span></div>
             <div className="scan-viewport">
               <div className="scan-grid" />
               <div className="scan-corners" />
+              {scanState === "capturing" && <div className="scan-sweep" />}
               <div className="scan-target">
-                {scanState === "complete" ? <Check size={27} /> : <ScanLine size={27} />}
-                <strong>{scanState === "ready" ? "Ready to scan" : scanState === "capturing" ? "Mapping the room" : "Space captured"}</strong>
-                <span>{scanState === "ready" ? "Point your phone at the center of the room" : scanState === "capturing" ? "Move slowly · keep the room in frame" : "Your 3D space is ready to explore"}</span>
+                <div className={scanState === "capturing" ? "scan-progress-ring active" : "scan-progress-ring"} style={{ "--progress": `${scanProgress * 3.6}deg` } as CSSProperties}>
+                  <div className="scan-progress-track" />
+                  <div className="scan-progress-value">{scanState === "complete" ? <Check size={25} /> : <strong>{scanProgress}%</strong>}</div>
+                </div>
+                <strong>{scanState === "ready" ? activeScanStage.label : scanState === "capturing" ? activeScanStage.label : "Space captured"}</strong>
+                <span>{scanState === "complete" ? activeScanStage.hint : activeScanStage.hint}</span>
               </div>
-              <div className="scan-readout"><span><small>ROOM</small>LIVING ROOM</span><span><small>LIGHT</small>GOOD</span><span><small>DEPTH</small>{scanState === "complete" ? "100%" : "LIVE"}</span></div>
+              <div className="scan-readout"><span><small>ROOM</small>LIVING ROOM</span><span><small>LIGHT</small>GOOD</span><span><small>DEPTH</small>{scanState === "complete" ? "100%" : scanState === "capturing" ? `${scanProgress}%` : "LIVE"}</span></div>
             </div>
             <div className="scan-footer">
               {scanState === "complete" ? (
                 <div className="scan-complete-actions">
+                  <div className="scan-summary"><Check size={14} /> 6 ROOMS READY TO EXPLORE</div>
                   <button className="scan-button" onClick={() => openTour("living")}><span>VIEW YOUR TOUR</span><ArrowUpRight size={18} /></button>
-                  <button className="scan-secondary-action" onClick={() => setScanState("ready")}>SCAN ANOTHER ROOM</button>
+                  <button className="scan-secondary-action" onClick={() => { setScanProgress(0); setScanState("ready"); }}>SCAN ANOTHER ROOM</button>
                 </div>
               ) : (
                 <>
-                  <button className={scanState === "capturing" ? "scan-button scanning" : "scan-button"} disabled={scanState === "capturing"} onClick={() => setScanState("capturing")}>
-                    {scanState === "capturing" ? <><span className="scanning-dot" /> SCANNING...</> : <><span>START SCAN</span><ScanLine size={18} /></>}
+                  <button className={scanState === "capturing" ? "scan-button scanning" : "scan-button"} disabled={scanState === "capturing"} onClick={() => { setScanProgress(2); setScanState("capturing"); }}>
+                    {scanState === "capturing" ? <><span className="scanning-dot" /> CAPTURING {scanProgress}%</> : <><span>START SCAN</span><ScanLine size={18} /></>}
                   </button>
-                  <p>Keep your phone steady. You can stop anytime.</p>
+                  <p>{scanState === "capturing" ? "Move slowly around the room · keep your phone level" : "Your camera stays on-device during this simulation"}</p>
                 </>
               )}
             </div>

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import * as pc from "playcanvas";
 
-export type RoomId = "living" | "kitchen" | "terrace";
+export type RoomId = "living" | "kitchen" | "terrace" | "dining" | "bedroom" | "bath";
 
 type PropertySceneProps = {
   room: RoomId;
@@ -16,6 +16,9 @@ const roomViews: Record<RoomId, { target: [number, number, number]; yaw: number;
   living: { target: [0, 1.45, -0.4], yaw: -28, pitch: 3, radius: 7.8 },
   kitchen: { target: [1.6, 1.45, -0.1], yaw: -76, pitch: 4, radius: 6.1 },
   terrace: { target: [-1.8, 1.45, -1.1], yaw: 26, pitch: 1, radius: 7.1 },
+  dining: { target: [1.2, 1.25, -2.05], yaw: -112, pitch: 4, radius: 5.7 },
+  bedroom: { target: [-2.1, 1.35, -2.2], yaw: 156, pitch: 3, radius: 5.3 },
+  bath: { target: [3.2, 1.35, -2.45], yaw: -152, pitch: 2, radius: 4.9 },
 };
 
 function material(color: string, gloss = 0.18, metalness = 0) {
